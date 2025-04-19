@@ -1,120 +1,99 @@
-import csv
-from typing import Optional
+from models import Transaction, MarketPrice, Player
 
+class GTAOnlineOperations:
+    def __init__(self):
+        self.transactions = []  # Lista para almacenar transacciones
+        self.market_prices = []  # Lista para almacenar precios de ítems
+        self.players = []  # Lista para almacenar jugadores
 
-from models import *
+    def add_transaction(self, transaction):
+        """Agrega una transacción a la lista y actualiza el gasto total del jugador."""
+        if not isinstance(transaction, Transaction):
+            raise ValueError("El objeto debe ser una instancia de Transaction")
+        self.transactions.append(transaction)
+        # Actualizar el total gastado del jugador
+        player = self.get_player_by_id(transaction.player_id)
+        if player:
+            player.add_transaction(transaction.amount)
+        else:
+            # Si el jugador no existe, crear uno nuevo con nombre genérico
+            new_player = Player(transaction.player_id, f"User_{transaction.player_id}")
+            new_player.add_transaction(transaction.amount)
+            self.players.append(new_player)
+        return transaction
 
-DATABASE_FILENAME = "pets.csv"
-column_fields = ["id", "name", "breed", "birth", "kind", "female"]
+    def get_transaction_by_id(self, transaction_id):
+        """Busca una transacción por su ID."""
+        for transaction in self.transactions:
+            if transaction.transaction_id == transaction_id:
+                return transaction
+        return None
 
+    def get_all_transactions(self):
+        """Devuelve todas las transacciones."""
+        return self.transactions
 
-#show all pets in file
-def read_all_pets():
-    with open(DATABASE_FILENAME) as csvfile:
-        reader = csv.DictReader(
-            csvfile,
-        )
-        return [PetWithId(**row) for row in reader]
+    def add_market_price(self, market_price):
+        """Agrega un registro de precio de mercado."""
+        if not isinstance(market_price, MarketPrice):
+            raise ValueError("El objeto debe ser una instancia de MarketPrice")
+        self.market_prices.append(market_price)
+        return market_price
 
+    def get_market_price_by_item_and_date(self, item_id, date):
+        """Busca un precio de mercado por ID de ítem y fecha."""
+        for price in self.market_prices:
+            if price.item_id == item_id and price.date == date:
+                return price
+        return None
 
-##Show a pet by the ID
-def read_one_pet(pet_id):
-    with open(DATABASE_FILENAME) as csvfile:
-        reader=csv.DictReader(
-            csvfile,
-        )
-        for row in reader:
-            if int(row["id"])==pet_id:
-                return PetWithId(**row)
+    def get_all_market_prices(self):
+        """Devuelve todos los registros de precios de mercado."""
+        return self.market_prices
 
+    def add_player(self, player):
+        """Agrega un jugador a la lista."""
+        if not isinstance(player, Player):
+            raise ValueError("El objeto debe ser una instancia de Player")
+        if self.get_player_by_id(player.player_id) is None:
+            self.players.append(player)
+            return player
+        raise ValueError(f"Jugador con ID {player.player_id} ya existe")
 
-##Add a pet in the file
-#neccesary to implements a strategy for the ID of the new pet.
-#First obtain the last ID from the db.
-#Then create the new pet with the new ID
+    def get_player_by_id(self, player_id):
+        """Busca un jugador por su ID."""
+        for player in self.players:
+            if player.player_id == player_id:
+                return player
+        return None
 
-##First
-def get_next_ID():
-    try:
-        with open(DATABASE_FILENAME, mode="r") as csvfile:
-            reader = csv.DictReader(csvfile)
-            max_id=max(int(row["id"])for row in reader)
-            return (max_id +1)
-    except(FileNotFoundError, ValueError):
-        return 1
+    def get_all_players(self):
+        """Devuelve todos los jugadores."""
+        return self.players
 
+    def calculate_total_spending(self):
+        """Calcula el total gastado en todas las transacciones."""
+        return sum(transaction.amount for transaction in self.transactions)
 
-##Write or save a new pet in CSV
-def write_pet_into_csv(pet:PetWithId):
-    with open(DATABASE_FILENAME, mode="a", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=column_fields,)
-        writer.writerow(pet.model_dump())
+    def calculate_average_transaction(self):
+        """Calcula el monto promedio de las transacciones."""
+        if not self.transactions:
+            return 0
+        return self.calculate_total_spending() / len(self.transactions)
 
-
-##Then, create a new pet
-def new_pet(pet:Pet):
-    id:int=get_next_ID()
-    pet_with_id=PetWithId(id=id, **pet.model_dump())
-    write_pet_into_csv(pet_with_id)
-    return pet_with_id
-
-#Edit a pet
-def modify_pet(id: int, pet: dict):
-    updated_pet: Optional[PetWithId] = None
-    pets = read_all_pets()
-
-
-    pet_found = False
-
-    # Iterate through pets to find and update the specific pet
-    for number, pet_ in enumerate(pets):
-        if pet_.id == id:
-
-            if pet.get("name") is not None:
-                pets[number].name = pet["name"]
-            if pet.get("breed") is not None:
-                pets[number].breed = pet["breed"]
-
-            updated_pet = pets[number]
-            pet_found = True
-            break  # Exit the loop once the pet is found and updated
-
-    # Only write to file if a pet was actually modified
-    if pet_found:
-        with open(DATABASE_FILENAME, mode="w", newline="") as csvfile:
-            writer = csv.DictWriter(
-                csvfile,
-                fieldnames=column_fields,
-            )
-            writer.writeheader()
-            for pet in pets:
-                writer.writerow(pet.model_dump())
-
-        return updated_pet
-
-    # Return None if no pet was found
-    return None
-
-
-#Delete a pet
-def remove_pet(id:int):
-    deleted_pet: Optional[Pet] = None
-    pets =read_all_pets()
-    with open(DATABASE_FILENAME, mode="w", newline="") as csvfile:
-        writer = csv.DictWriter(
-            csvfile,
-            fieldnames=column_fields,
-        )
-
-        writer.writeheader()
-        for pet in pets:
-            if pet.id == id:
-                deleted_pet=pet
-                continue
-            writer.writerow(pet.model_dump())
-    if deleted_pet:
-        dict_pet_without_id = (
-            deleted_pet.model_dump()
-        )
-        del dict_pet_without_id["id"]
-        return Pet(**dict_pet_without_id)
+    def calculate_inflation_rate(self, item_id, start_date, end_date):
+        """Calcula la tasa de inflación para un ítem entre dos fechas."""
+        start_price = None
+        end_price = None
+        for price in self.market_prices:
+            if price.item_id == item_id:
+                if price.date == start_date:
+                    start_price = price.price
+                if price.date == end_date:
+                    end_price = price.price
+        if start_price is None or end_price is None:
+            return None
+        years = int(end_date[:4]) - int(start_date[:4])
+        if years == 0:
+            return 0
+        return ((end_price / start_price) ** (1 / years) - 1) * 100  # Tasa de crecimiento anual compuesta (%)

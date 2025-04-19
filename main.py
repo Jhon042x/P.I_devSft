@@ -1,271 +1,206 @@
-from datetime import datetime
-
-from fastapi import FastAPI
-from fastapi import HTTPException
-from fastapi.params import Depends
-from sqlalchemy import Boolean
-
-#SQLMODEL
-from fastapi import UploadFile, File, Form, Query
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
-from sqlmodel import Session
-from typing import List, Optional
-
-from starlette.responses import JSONResponse
-
-
-import models
-from models import *
-from operations import *
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from typing import List
+from models import Transaction, MarketPrice, Player
+from operations import GTAOnlineOperations
+import csv
 from contextlib import asynccontextmanager
-from database import Base
-from db_connection import AsyncSessionLocal, get_db_session, get_engine
-from typing import Annotated
-from sqlalchemy.ext.asyncio import AsyncSession
-from db_operations import *
 
-#Importar modelos SQLMODEL
-from sqlmodel_conn import get_session, init_db
-from sqlmodel_db import PetSQL
-import sqlmodel_ops as crud
-from sqlmodel_ops import get_pet, mark_pet_inactive
-from utils.file_utils import save_upload_file
-from utils.terms import *
-from utils import file_utils
+app = FastAPI(title="GTA Online Microtransactions API")
 
+# Pydantic models for request/response validation
+class TransactionModel(BaseModel):
+    transaction_id: int
+    player_id: str
+    item: str
+    amount: int
+    date: str
+
+class MarketPriceModel(BaseModel):
+    item_id: int
+    item_name: str
+    price: int
+    date: str
+
+class PlayerModel(BaseModel):
+    player_id: str
+    username: str
+    total_spent: int = 0
+
+# Initialize operations
+ops = GTAOnlineOperations()
+
+# Lifespan event handler for startup and shutdown
 @asynccontextmanager
-async def lifespan(app:FastAPI):
-    await init_db()
-    yield
+async def lifespan(app: FastAPI):
+    # Startup: Load CSV data
+    try:
+        with open("gta_online_data.csv", newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['type'] == 'Transaction':
+                    trans = Transaction(
+                        int(row['transaction_id']),
+                        row['player_id'],
+                        row['item'],
+                        int(row['amount']),
+                        row['date']
+                    )
+                    ops.add_transaction(trans)
+                elif row['type'] == 'MarketPrice':
+                    price = MarketPrice(
+                        int(row['item_id']),
+                        row['item_name'],
+                        int(row['price']),
+                        row['date']
+                    )
+                    ops.add_market_price(price)
+                elif row['type'] == 'Player':
+                    player = Player(
+                        row['player_id'],
+                        row['username'],
+                        int(row['total_spent']) if row['total_spent'] else 0
+                    )
+                    ops.add_player(player)
+        print("CSV data loaded successfully.")
+    except FileNotFoundError:
+        print("Error: 'gta_online_data.csv' not found. Starting with empty data.")
+    except Exception as e:
+        print(f"Error loading CSV data: {str(e)}. Starting with empty data.")
 
-app = FastAPI(lifespan=lifespan)
-app.mount("/pet_images", StaticFiles(directory="pet_images"), name="pet_images")
+    yield  # Application runs here
 
-##Pets with IMAGE
-#Add a pet
-@app.post("/pets", response_model=PetSQL, tags=["SQLMODEL"])
-async def create_pet_img(
-        name: str = Form(...),
-    breed: Optional[str] = Form(None),
-    birth: Optional[int] = Form(None),
-    kind: Optional[Kind] = Form(None),
-    genre: Optional[Genre] = Form(None),
-    image: Optional[UploadFile] = File(None),
-    session: Session = Depends(get_session)
-):
+    # Shutdown: Optional cleanup
+    print("Shutting down GTA Online Microtransactions API.")
 
-    pet_data=PetSQL(
-        name=name,
-        breed=breed,
-        birth=birth,
-        kind=kind,
-        genre=genre,
+app.lifespan = lifespan
 
+# Endpoints for Transactions
+@app.post("/transactions/", response_model=TransactionModel)
+async def add_transaction(transaction: TransactionModel):
+    trans = Transaction(
+        transaction.transaction_id,
+        transaction.player_id,
+        transaction.item,
+        transaction.amount,
+        transaction.date
     )
-    pet = await crud.create_pet_sql(session, pet_data)
+    try:
+        ops.add_transaction(trans)
+        return transaction
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-    if image:
-        try:
-            image_path = await save_upload_file(image, pet.id, pet.name)
-            pet.image_path = image_path
-            session.add(pet)
-            await session.commit()
-            await session.refresh(pet)
-        except ValueError as e:
-            return JSONResponse(
-                status_code=201,
-                content={
-                    "id":pet.id,
-                    "warning":str(e),
-                    **pet.dict(exclude={"id"})
-                }
-            )
-    return pet
+@app.get("/transactions/", response_model=List[TransactionModel])
+async def get_all_transactions():
+    return [
+        TransactionModel(
+            transaction_id=t.transaction_id,
+            player_id=t.player_id,
+            item=t.item,
+            amount=t.amount,
+            date=t.date
+        ) for t in ops.get_all_transactions()
+    ]
 
-
-
-#Get one pet
-@app.get("/pets/{pet_id}", response_model=PetSQL, tags=["SQLMODEL"])
-async def read_pet_img(pet_id:int, session:Session = Depends(get_session)):
-    pet = await crud.get_pet(session=session, pet_id=pet_id)
-    if pet is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Mascota con img no encontrada"
-        )
-    return pet
-
-
-#Get all pets
-
-@app.get("/pets", response_model=list[PetSQL], tags=["SQLMODEL"])
-async def read_pets_img(session:Session = Depends(get_session)):
-    pets = await crud.get_all_pets(session=session)
-    return pets
-
-
-
-#Update one pet
-@app.patch("/pets/{pet_id}", response_model=PetSQL, tags=["SQLMODEL"])
-async def update_pet_img(pet_id:int, pet_update:PetSQL,session:Session=Depends(get_session)):
-    pet = await crud.update_pet(session, pet_id, pet_update.dict(exclude_unset=True))
-    if pet is None:
-        raise HTTPException(status_code=404, detail="Mascota no encontrada para actualizar")
-    return pet
-
-
-#Deactive a pet
-@app.patch("/petsm/{pet_id}", response_model=PetSQL, tags=["SQLMODEL"])
-async def deactive_pet_img(pet_id:int, sesion:Session=Depends(get_session)):
-    pet = await crud.mark_pet_inactive(sesion, pet_id)
-    if pet is None:
-        raise HTTPException(status_code=404, detail="Mascota no encontrada para desactivar")
-    return pet
-
-
-
-
-''' 
-@asynccontextmanager
-async def lifespan(app:FastAPI):
-    engine = get_engine()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        yield
-    await engine.dispose()
-app = FastAPI(lifespan=lifespan)
-
-'''
-#pets:List[Pet]=[]
-@app.post("/pet", response_model=Pet)
-async def create_pet(pet:Pet):
-    #pets.append(pet)
-    return pet
-
-
-#show all pets
-@app.get("/allpets", response_model=list[PetWithId])
-async def show_all_pets():
-    pets=read_all_pets()
-    return pets
-
-    '''return [
-        {
-            "id":1,
-            "name":"chispas",
-            "kind":"cat"
-        },
-        {
-            "id":2,
-            "name":"pascal",
-            "kind":"cat"
-        },
-        {
-            "id":3,
-            "name":"elefante",
-            "kind":"dog"
-        }
-    ]'''
-
-
-#show one pet
-@app.get("/pet/{pet_id}", response_model=PetWithId)
-async def show_pet(pet_id:int):
-    pet= read_one_pet(pet_id)
-    if not pet:
-        raise HTTPException(status_code=404, detail="Pet doesnt found")
-    return pet
-
-##Adding a pet into the database
-@app.post("/pet", response_model=PetWithId)
-def add_pet(pet:Pet):
-    return new_pet(pet)
-
-
-#modify one pet by ID
-@app.put("/pet/{pet_id}", response_model=PetWithId)
-def update_pet(pet_id:int, pet_update:UpdatedPet):
-    modified=modify_pet(
-        pet_id,pet_update.model_dump(exclude_unset=True),
-    )
-    if not modified:
-        raise HTTPException(status_code=404, detail="Pet not modified")
-
-    return modified
-
-#Delete one pet by the ID
-@app.delete("/pet/{pet_id}", response_model=Pet)
-def delete_one_pet(pet_id:int):
-    removed_pet=remove_pet(pet_id)
-    if not removed_pet:
-        raise HTTPException(
-            status_code=404, detail="Pet not deleted"
-        )
-    return removed_pet
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request,exc):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "message":"Carambas, algo fallo",
-            "detail":exc.detail,
-            "path":request.url.path
-        },
+@app.get("/transactions/{transaction_id}", response_model=TransactionModel)
+async def get_transaction(transaction_id: int):
+    trans = ops.get_transaction_by_id(transaction_id)
+    if trans is None:
+        raise HTTPException(status_code=404, detail="Transacción no encontrada")
+    return TransactionModel(
+        transaction_id=trans.transaction_id,
+        player_id=trans.player_id,
+        item=trans.item,
+        amount=trans.amount,
+        date=trans.date
     )
 
+# Endpoints for Market Prices
+@app.post("/market-prices/", response_model=MarketPriceModel)
+async def add_market_price(market_price: MarketPriceModel):
+    price = MarketPrice(
+        market_price.item_id,
+        market_price.item_name,
+        market_price.price,
+        market_price.date
+    )
+    try:
+        ops.add_market_price(price)
+        return market_price
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/error")
-async def raise_exception():
-    raise HTTPException(status_code=400)
+@app.get("/market-prices/", response_model=List[MarketPriceModel])
+async def get_all_market_prices():
+    return [
+        MarketPriceModel(
+            item_id=p.item_id,
+            item_name=p.item_name,
+            price=p.price,
+            date=p.date
+        ) for p in ops.get_all_market_prices()
+    ]
 
+@app.get("/market-prices/{item_id}/{date}", response_model=MarketPriceModel)
+async def get_market_price(item_id: int, date: str):
+    price = ops.get_market_price_by_item_and_date(item_id, date)
+    if price is None:
+        raise HTTPException(status_code=404, detail="Precio de mercado no encontrado")
+    return MarketPriceModel(
+        item_id=price.item_id,
+        item_name=price.item_name,
+        price=price.price,
+        date=price.date
+    )
 
-@app.post("/dbpet", response_model=dict[str, int])
-async def add_pet_db(pet: models.Pet, db_session:Annotated[AsyncSession,Depends(get_db_session)]):
-    pet_id=await db_create_pet(db_session,
-                               pet.name,
-                               pet.breed,
-                               pet.birth,
-                               pet.kind,
-                               pet.female, )
-    return {"Nueva mascota":pet_id}
+# Endpoints for Players
+@app.post("/players/", response_model=PlayerModel)
+async def add_player(player: PlayerModel):
+    ply = Player(
+        player.player_id,
+        player.username,
+        player.total_spent
+    )
+    try:
+        ops.add_player(ply)
+        return player
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/players/", response_model=List[PlayerModel])
+async def get_all_players():
+    return [
+        PlayerModel(
+            player_id=p.player_id,
+            username=p.username,
+            total_spent=p.total_spent
+        ) for p in ops.get_all_players()
+    ]
 
-@app.get("/dbpet/{pet_id}", response_model=PetWithId)
-async def one_pet_db(pet_id:int, db_session:Annotated[AsyncSession,Depends(get_db_session)]):
-    pet= await db_get_pet(db_session=db_session, pet_id=pet_id)
-    if pet is None:
-        raise HTTPException(status_code=404, detail="No esta la mascota "+{pet_id})
-    return pet
+@app.get("/players/{player_id}", response_model=PlayerModel)
+async def get_player(player_id: str):
+    player = ops.get_player_by_id(player_id)
+    if player is None:
+        raise HTTPException(status_code=404, detail="Jugador no encontrado")
+    return PlayerModel(
+        player_id=player.player_id,
+        username=player.username,
+        total_spent=player.total_spent
+    )
 
+# Analytical Endpoints
+@app.get("/analytics/total-spending")
+async def get_total_spending():
+    return {"total_spending": ops.calculate_total_spending()}
 
-@app.get("/dballpets", response_model=list[PetWithId])
-async def all_pet_db(db_session:Annotated[AsyncSession,Depends(get_db_session)]):
-    pets = await db_get_all_pet(db_session=db_session)
-    if pets is None:
-        raise HTTPException(status_code=404, detail="No tenemos mascotas")
-    return pets
+@app.get("/analytics/average-transaction")
+async def get_average_transaction():
+    return {"average_transaction": ops.calculate_average_transaction()}
 
-
-@app.put("/dbpet/{pet_id}")
-async def modify_name_db(pet_id:int,new_name:str,db_session:Annotated[AsyncSession, Depends(get_db_session)]):
-    pet = await db_update_pet(db_session=db_session,pet_id=pet_id,new_name=new_name)
-    return pet
-
-
-@app.delete("/dbpet/{pet_id}")
-async def delete_pet_db(pet_id:int, db_session:Annotated[AsyncSession,Depends(get_db_session)]):
-    pet = await db_remove_pet(pet_id=pet_id, db_session=db_session)
-    return pet
-
+@app.get("/analytics/inflation-rate")
+async def get_inflation_rate(item_id: int, start_date: str, end_date: str):
+    rate = ops.calculate_inflation_rate(item_id, start_date, end_date)
+    if rate is None:
+        raise HTTPException(status_code=404, detail="Datos insuficientes para calcular la tasa de inflación")
+    return {"inflation_rate": rate}
