@@ -116,6 +116,35 @@ async def get_transaction(transaction_id: int):
         date=trans.date
     )
 
+@app.put("/transactions/{transaction_id}", response_model=TransactionModel)
+async def update_transaction(transaction_id: int, transaction: TransactionModel):
+    trans = Transaction(
+        transaction.transaction_id,
+        transaction.player_id,
+        transaction.item,
+        transaction.amount,
+        transaction.date
+    )
+    try:
+        updated = ops.update_transaction(transaction_id, trans)
+        return TransactionModel(
+            transaction_id=updated.transaction_id,
+            player_id=updated.player_id,
+            item=updated.item,
+            amount=updated.amount,
+            date=updated.date
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/transactions/{transaction_id}")
+async def delete_transaction(transaction_id: int):
+    try:
+        ops.delete_transaction(transaction_id)
+        return {"message": f"Transacción {transaction_id} eliminada"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
 # Endpoints for Market Prices
 @app.post("/market-prices/", response_model=MarketPriceModel)
 async def add_market_price(market_price: MarketPriceModel):
@@ -154,6 +183,33 @@ async def get_market_price(item_id: int, date: str):
         date=price.date
     )
 
+@app.put("/market-prices/{item_id}/{date}", response_model=MarketPriceModel)
+async def update_market_price(item_id: int, date: str, market_price: MarketPriceModel):
+    price = MarketPrice(
+        market_price.item_id,
+        market_price.item_name,
+        market_price.price,
+        market_price.date
+    )
+    try:
+        updated = ops.update_market_price(item_id, date, price)
+        return MarketPriceModel(
+            item_id=updated.item_id,
+            item_name=updated.item_name,
+            price=updated.price,
+            date=updated.date
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/market-prices/{item_id}/{date}")
+async def delete_market_price(item_id: int, date: str):
+    try:
+        ops.delete_market_price(item_id, date)
+        return {"message": f"Precio de mercado para ítem {item_id} en {date} eliminado"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
 # Endpoints for Players
 @app.post("/players/", response_model=PlayerModel)
 async def add_player(player: PlayerModel):
@@ -188,6 +244,31 @@ async def get_player(player_id: str):
         username=player.username,
         total_spent=player.total_spent
     )
+
+@app.put("/players/{player_id}", response_model=PlayerModel)
+async def update_player(player_id: str, player: PlayerModel):
+    ply = Player(
+        player.player_id,
+        player.username,
+        player.total_spent
+    )
+    try:
+        updated = ops.update_player(player_id, ply)
+        return PlayerModel(
+            player_id=updated.player_id,
+            username=updated.username,
+            total_spent=updated.total_spent
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/players/{player_id}")
+async def delete_player(player_id: str):
+    try:
+        ops.delete_player(player_id)
+        return {"message": f"Jugador {player_id} eliminado"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # Analytical Endpoints
 @app.get("/analytics/total-spending")

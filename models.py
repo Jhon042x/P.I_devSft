@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 
 
 class Transaction:
@@ -13,7 +14,23 @@ class Transaction:
             item (str): Ítem comprado (ej., 'Shark Card $500K').
             amount (int): Monto en GTA$ (dinero virtual).
             date (str): Fecha de la transacción (formato 'YYYY-MM-DD').
+
+        Raises:
+            ValueError: Si el ID o monto es negativo, el ítem está vacío, o la fecha es inválida.
         """
+        if transaction_id < 0:
+            raise ValueError("El ID de la transacción no puede ser negativo")
+        if not player_id:
+            raise ValueError("El ID del jugador no puede estar vacío")
+        if not item:
+            raise ValueError("El ítem no puede estar vacío")
+        if amount < 0:
+            raise ValueError("El monto no puede ser negativo")
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("La fecha debe estar en formato YYYY-MM-DD")
+
         self.transaction_id: int = transaction_id
         self.player_id: str = player_id
         self.item: str = item
@@ -35,7 +52,21 @@ class MarketPrice:
             item_name (str): Nombre del ítem (ej., 'Luxury Car').
             price (int): Precio en GTA$ en el mercado.
             date (str): Fecha del precio registrado (formato 'YYYY-MM-DD').
+
+        Raises:
+            ValueError: Si el ID o precio es negativo, el nombre está vacío, o la fecha es inválida.
         """
+        if item_id < 0:
+            raise ValueError("El ID del ítem no puede ser negativo")
+        if not item_name:
+            raise ValueError("El nombre del ítem no puede estar vacío")
+        if price < 0:
+            raise ValueError("El precio no puede ser negativo")
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("La fecha debe estar en formato YYYY-MM-DD")
+
         self.item_id: int = item_id
         self.item_name: str = item_name
         self.price: int = price
@@ -55,7 +86,17 @@ class Player:
             player_id (str): ID único del jugador.
             username (str): Nombre de usuario en GTA Online.
             total_spent (int, optional): Total gastado en microtransacciones (GTA$). Por defecto 0.
+
+        Raises:
+            ValueError: Si el ID o nombre de usuario está vacío, o el total gastado es negativo.
         """
+        if not player_id:
+            raise ValueError("El ID del jugador no puede estar vacío")
+        if not username:
+            raise ValueError("El nombre de usuario no puede estar vacío")
+        if total_spent < 0:
+            raise ValueError("El total gastado no puede ser negativo")
+
         self.player_id: str = player_id
         self.username: str = username
         self.total_spent: int = total_spent
