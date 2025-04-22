@@ -1,0 +1,10 @@
+item_id,item_name,price,date
+1,Luxury Car,1000000,2013-10-01
+1,Luxury Car,1200000,2016-01-01
+1,Luxury Car,1500000,2020-01-01
+1,Luxury Car,1800000,2025-01-01
+2,Yacht,6000000,2015-12-01
+2,Yacht,7500000,2025-01-01
+3,Private Jet,8000000,2014-08-15
+3,Private Jet,9500000,2020-06-01
+3,Private Jet,11000000,2025-01-01
