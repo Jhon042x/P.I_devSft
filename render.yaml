@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: pi-devsft
+    env: python
+    buildCommand: ""
+    startCommand: python main.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pi-devsft-db
+          property: connectionString
+databases:
+  - name: pi-devsft-db
+    databaseName: pi_dev_db
+    user: pi_user

@@ -868,3 +868,5 @@ async def get_market_trends(item_id: int, from_date: Optional[str] = None, to_da
         "item_name": trends[0].item_name if trends else "Unknown",
         "prices": [{"date": p.date, "price": p.price} for p in trends]
     }
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
