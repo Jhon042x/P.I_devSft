@@ -3,7 +3,7 @@ services:
     name: pi-devsft
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: gunicorn main:app -k uvicorn.workers.UvicornWorker
+    startCommand: python main.py
     envVars:
       - key: DATABASE_URL
         fromDatabase:
