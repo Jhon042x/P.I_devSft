@@ -2,8 +2,8 @@ services:
   - type: web
     name: pi-devsft
     env: python
-    buildCommand: ""
-    startCommand: python main.py
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: gunicorn main:app -k uvicorn.workers.UvicornWorker
     envVars:
       - key: DATABASE_URL
         fromDatabase:
