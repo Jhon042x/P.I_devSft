@@ -4,7 +4,7 @@ services:
     env: python
     buildCommand: "pip install -r requirements.txt"
     # ¡IMPORTANTE! Cambia el startCommand
-    startCommand: "python main.py"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: DATABASE_URL
         fromDatabase:

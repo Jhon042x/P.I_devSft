@@ -881,3 +881,9 @@ async def get_market_trends_api(item_id: int, from_date: Optional[str] = None, t
         "item_name": trends[0].item_name if trends else "Unknown",
         "prices": [{"date": p.date, "price": p.price} for p in trends]
     }
+
+if __name__ == "__main__":
+    # Obtener el puerto del entorno (Render lo proporciona) o usar 8000 como predeterminado
+    port = int(os.environ.get("PORT", 8000))
+    # Iniciar el servidor uvicorn, vinculándolo a 0.0.0.0 para aceptar conexiones externasAdd commentMore actions
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
