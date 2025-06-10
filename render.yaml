@@ -3,7 +3,8 @@ services:
     name: pi-devsft
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: python main.py
+    # ¡IMPORTANTE! Cambia el startCommand
+    startCommand: "python main.py"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
