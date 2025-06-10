@@ -661,8 +661,7 @@ async def delete_transaction_html(request: Request, transaction_id: int):
 # --- Analytics Endpoints ---
 @app.get("/analytics", response_class=HTMLResponse)
 async def analytics_page(request: Request):
-    """Renders the analytics dashboard with various statistics."""
-    try:  # <--- Added try-except block
+    try:
         total_transactions = len(ops.transactions)
         total_players = len(ops.players)
         total_items = len({item.item_id for item in ops.market_prices.values()})  # Count unique item_ids
@@ -684,6 +683,7 @@ async def analytics_page(request: Request):
 
         return templates.TemplateResponse("analytics.html", {
             "request": request,
+            "ops": ops,
             "total_transactions": total_transactions,
             "total_players": total_players,
             "total_items": total_items,
