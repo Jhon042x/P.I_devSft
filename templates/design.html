@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Fase de Diseño - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Fase de Diseño del Proyecto</h2>
+    <div class="info-section">
+        <p>En la fase de diseño, se tradujeron los requisitos de la planificación en un diseño técnico detallado. Esto incluyó la definición de los modelos de datos (`models.py`), la estructura de las operaciones de negocio (`operations.py`) y el diseño de la interfaz de usuario.</p>
+        <p><strong>Aspectos destacados del diseño:</strong></p>
+        <ul>
+            <li><strong>Modelos de Datos:</strong> Se definieron las clases `Transaction`, `MarketPrice` y `Player` usando `dataclasses` para una estructura clara y eficiente.</li>
+            <li><strong>Lógica de Negocio:</strong> Se centralizaron las operaciones de gestión de datos (añadir, obtener, actualizar, eliminar) en la clase `GTAOnlineOperations` para mantener el código modular y limpio.</li>
+            <li><strong>Diseño de API:</strong> Se definieron los endpoints de la API RESTful utilizando FastAPI, incluyendo validación de datos con Pydantic.</li>
+            <li><strong>Diseño de Interfaz de Usuario (UI):</strong> Se crearon las plantillas HTML (`templates/`) con Jinja2 para las distintas vistas (añadir/ver ítems, jugadores, transacciones, análisis), siguiendo un diseño responsivo y fácil de usar. Se utilizaron formularios para la interacción del usuario y tablas para la visualización de datos.</li>
+            <li><strong>Almacenamiento de Datos:</strong> Se optó por archivos CSV y JSON para un almacenamiento simple y persistente de los datos simulados.</li>
+            <li><strong>Manejo de Errores:</strong> Se implementó un manejo robusto de excepciones para proporcionar retroalimentación útil tanto al usuario como al desarrollador.</li>
+        </ul>
+        <p>El diseño se enfocó en la modularidad, la facilidad de mantenimiento y la escalabilidad futura del sistema.</p>
+    </div>
+{% endblock %}

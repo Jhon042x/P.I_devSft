@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Añadir Jugador - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Añadir Nuevo Jugador</h2>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+    <form action="/players" method="post" class="form-card">
+        <label for="player_id">ID del Jugador:</label>
+        <input type="text" id="player_id" name="player_id" value="{{ player_id if player_id }}" required>
+
+        <label for="username">Nombre de Usuario:</label>
+        <input type="text" id="username" name="username" value="{{ username if username }}" required>
+
+        <label for="balance">Saldo Inicial:</label>
+        <input type="number" id="balance" name="balance" value="{{ balance if balance }}" required min="0">
+
+        <button type="submit">Añadir Jugador</button>
+    </form>
+    <p><a href="/view-players" class="button secondary">Volver a Ver Jugadores</a></p>
+{% endblock %}

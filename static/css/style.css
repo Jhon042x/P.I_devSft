@@ -1,0 +1,362 @@
+/* static/css/style.css */
+
+/* General Body and Container */
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header and Navigation */
+header {
+    background-color: #333;
+    color: #fff;
+    padding: 1rem 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #fff;
+    text-decoration: none;
+}
+
+nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+nav ul li {
+    position: relative;
+    margin-left: 20px;
+}
+
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    padding: 10px 15px;
+    display: block;
+    transition: background-color 0.3s ease;
+}
+
+nav ul li a:hover, .dropbtn:hover {
+    background-color: #555;
+    border-radius: 4px;
+}
+
+/* Dropdown Menu */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #444;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 4px;
+}
+
+.dropdown-content a {
+    color: white;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+}
+
+.dropdown-content a:hover {
+    background-color: #666;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+/* Main Content */
+main {
+    padding: 20px 0;
+    min-height: calc(100vh - 120px); /* Adjust based on header/footer height */
+}
+
+/* Headings */
+h1, h2, h3 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* Buttons */
+.button, button[type="submit"] {
+    display: inline-block;
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.button:hover, button[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+.button.secondary {
+    background-color: #6c757d;
+}
+
+.button.secondary:hover {
+    background-color: #5a6268;
+}
+
+.button.delete {
+    background-color: #dc3545;
+}
+
+.button.delete:hover {
+    background-color: #c82333;
+}
+
+.button.small {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+}
+
+/* Forms */
+.form-card {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.form-card label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.form-card input[type="text"],
+.form-card input[type="number"],
+.form-card input[type="file"],
+.form-card select {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.form-card button[type="submit"] {
+    width: auto;
+    padding: 12px 25px;
+    font-size: 1.1rem;
+}
+
+.form-hint {
+    font-size: 0.9em;
+    color: #777;
+    margin-top: -10px;
+    margin-bottom: 15px;
+}
+
+.search-form {
+    background-color: #e9e9e9;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.search-form input[type="text"],
+.search-form select {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Tables */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden; /* Ensures rounded corners apply to table */
+}
+
+.data-table th, .data-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+.data-table th {
+    background-color: #f8f8f8;
+    font-weight: bold;
+    color: #555;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+.data-table td form {
+    margin-bottom: 0;
+}
+
+/* Image Thumbnails */
+.item-thumbnail {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+.item-thumbnail.large {
+    width: 100px;
+    height: 100px;
+}
+
+/* Analytics Cards */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.card {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.analytics-card .metric {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #007bff;
+    margin-top: 10px;
+}
+
+.analytics-section {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.top-list {
+    list-style: decimal inside;
+    padding: 0;
+}
+
+.top-list li {
+    padding: 8px 0;
+    border-bottom: 1px dashed #eee;
+}
+
+.top-list li:last-child {
+    border-bottom: none;
+}
+
+
+/* Error Message */
+.error-message {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+.error-container {
+    text-align: center;
+    padding: 50px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer */
+footer {
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 1rem 0;
+    margin-top: 20px;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    nav ul {
+        flex-direction: column;
+        align-items: center;
+    }
+    nav ul li {
+        margin: 5px 0;
+    }
+    header .container {
+        flex-direction: column;
+    }
+    .logo {
+        margin-bottom: 10px;
+    }
+    .data-table, .form-card, .search-form, .analytics-section {
+        padding: 15px;
+    }
+    .data-table th, .data-table td {
+        padding: 8px 10px;
+        font-size: 0.9em;
+    }
+    .data-table .button.small {
+        margin: 2px;
+    }
+}
+
+/* Specific overrides for dropdown on smaller screens if necessary */
+@media (max-width: 600px) {
+    .dropdown-content {
+        position: static; /* Make dropdown content flow with document */
+        width: 100%;
+        box-shadow: none;
+        background-color: #555; /* Match parent background more closely */
+    }
+    .dropdown:hover .dropdown-content {
+        display: block; /* Ensure it still shows on hover */
+    }
+}

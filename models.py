@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import Optional
 import random
 
-
 @dataclass
 class Transaction:
     transaction_id: int
@@ -10,9 +9,7 @@ class Transaction:
     item: str
     amount: int
     date: str
-    # Adding transaction type (purchase/sale)
-    transaction_type: str = "purchase"
-
+    transaction_type: str = "purchase" # purchase/sale
 
 @dataclass
 class MarketPrice:
@@ -21,13 +18,12 @@ class MarketPrice:
     price: int
     date: str
 
-
 @dataclass
 class Player:
     player_id: str
     username: str
-    balance: int  # Player's current balance
-    total_spent: int = 0
+    balance: int # Player's current balance
+    total_spent: int = 0 # Total money spent on purchases
 
     @classmethod
     def create_with_random_balance(cls, player_id: str, username: str, total_spent: int = 0) -> 'Player':

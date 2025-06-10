@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h1>Bienvenido a la API de Economía de GTA Online</h1>
+    <p>Esta aplicación te permite gestionar y analizar las microtransacciones y la economía virtual de GTA Online.</p>
+    <p>Explora los diferentes apartados para añadir ítems, jugadores, transacciones, y ver análisis de datos.</p>
+
+    <div class="card-grid">
+        <div class="card">
+            <h2>Gestión de Items</h2>
+            <p>Añade nuevos ítems, consulta precios históricos y actualiza la información del mercado.</p>
+            <a href="/view-items" class="button">Ver Items</a>
+            <a href="/add-item" class="button secondary">Añadir Item</a>
+        </div>
+        <div class="card">
+            <h2>Gestión de Jugadores</h2>
+            <p>Registra jugadores, consulta sus saldos y su historial de gastos.</p>
+            <a href="/view-players" class="button">Ver Jugadores</a>
+            <a href="/add-player" class="button secondary">Añadir Jugador</a>
+        </div>
+        <div class="card">
+            <h2>Gestión de Transacciones</h2>
+            <p>Registra compras y ventas, y consulta el historial de transacciones.</p>
+            <a href="/view-transactions" class="button">Ver Transacciones</a>
+            <a href="/add-transaction" class="button secondary">Añadir Transacción</a>
+        </div>
+        <div class="card">
+            <h2>Análisis de Datos</h2>
+            <p>Obtén insights sobre la economía del juego: jugadores más gastadores, ítems más caros y tendencias del mercado.</p>
+            <a href="/analytics" class="button">Ver Análisis</a>
+        </div>
+    </div>
+{% endblock %}

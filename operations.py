@@ -1,6 +1,8 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from models import Transaction, MarketPrice, Player
 from datetime import datetime
+import json
+import os
 
 
 class TransactionError(Exception):
@@ -13,266 +15,225 @@ class GTAOnlineOperations:
         self.transactions: Dict[int, Transaction] = {}
         self.market_prices: Dict[Tuple[int, str], MarketPrice] = {}  # Key: (item_id, date)
         self.players: Dict[str, Player] = {}
-        self._next_transaction_id = 1  # Auto-incrementing transaction ID
+        self.item_images: Dict[str, str] = {}  # Key: item_id (str), Value: image_filename (str)
 
-    # Transactions
+        # Auto-incrementing IDs
+        self._next_transaction_id = 1
+        # _next_market_item_id será inicializado en startup_event basado en datos existentes
+        # _next_player_id_counter es para un posible auto-generador de IDs de jugador (no usado actualmente en forms)
+        self._next_player_id_counter = 1
+
+        # --- Helper for ID generation ---
+
+    def _get_next_transaction_id(self) -> int:
+        """Generates the next available transaction ID."""
+        current_id = self._next_transaction_id
+        self._next_transaction_id += 1
+        return current_id
+
+    def _get_next_market_item_id(self) -> int:
+        """Generates the next available market item ID based on existing items."""
+        if not self.market_prices:
+            return 1
+        # Extraer todos los item_id de las claves (item_id, date)
+        max_id = max(item_id for item_id, _ in self.market_prices.keys())
+        return max_id + 1
+
+    def _get_next_player_id_counter(self) -> int:
+        """
+        Initializes the player ID counter based on existing players if they use 'player_XXXX' format.
+        (Currently, player IDs are user-provided in the forms, so this is mainly for future auto-generation).
+        """
+        if not self.players:
+            return 1
+        max_suffix = 0
+        for player_id in self.players.keys():
+            if player_id.startswith("player_") and player_id[7:].isdigit():
+                try:
+                    suffix = int(player_id[7:])
+                    if suffix > max_suffix:
+                        max_suffix = suffix
+                except ValueError:
+                    pass  # Ignore if not in expected format
+        return max_suffix + 1
+
+    # --- Transactions ---
     def add_transaction(self, transaction: Transaction, validate_balance: bool = True) -> None:
         """
         Add a new transaction. Can optionally validate if the player has sufficient balance.
-
         Args:
             transaction: The transaction to add
             validate_balance: If True, checks if the player has enough balance for the purchase
-
         Raises:
             ValueError: If transaction ID already exists
-            TransactionError: If player doesn't exist or has insufficient balance
+            TransactionError: If player doesn't exist, item doesn't exist, or has insufficient balance
         """
-        # Handle auto-incrementing transaction ID if not provided
         if transaction.transaction_id <= 0:
             transaction.transaction_id = self._get_next_transaction_id()
         elif transaction.transaction_id in self.transactions:
             raise ValueError(f"Transaction ID {transaction.transaction_id} already exists")
 
-        # Auto-populate next ID for future transactions
-        self._next_transaction_id = max(self._next_transaction_id, transaction.transaction_id + 1)
-
-        # Check if player exists
         player = self.players.get(transaction.player_id)
         if not player:
-            raise TransactionError(f"Player ID {transaction.player_id} not found")
+            raise TransactionError(f"Player {transaction.player_id} not found")
 
-        # For purchases, validate the player has enough balance
-        if validate_balance and transaction.transaction_type == "purchase":
-            if player.balance < transaction.amount:
-                raise TransactionError(
-                    f"Insufficient balance. Player {player.username} has {player.balance} but transaction requires {transaction.amount}"
-                )
-            # Deduct from player's balance
-            player.balance -= transaction.amount
-        elif transaction.transaction_type == "sale":
-            # Add to player's balance for sales
-            player.balance += transaction.amount
+        # Basic item existence check (by name, assumes item name is unique enough for transactions)
+        item_exists = False
+        for (mp_item_id, mp_date), mp_price_obj in self.market_prices.items():
+            if mp_price_obj.item_name == transaction.item:
+                item_exists = True
+                break
 
-        # Add transaction and update player's total_spent for purchases
+        if not item_exists:
+            raise TransactionError(
+                f"Item '{transaction.item}' not found in market prices. Cannot complete transaction.")
+
+        if validate_balance:
+            if transaction.transaction_type == "purchase":
+                if player.balance < transaction.amount:
+                    raise TransactionError(
+                        f"Player {player.username} has insufficient balance for transaction (needs ${transaction.amount}). Current balance: ${player.balance}.")
+                player.balance -= transaction.amount
+                player.total_spent += transaction.amount
+            elif transaction.transaction_type == "sale":
+                player.balance += transaction.amount  # Add amount back to balance on sale
+
         self.transactions[transaction.transaction_id] = transaction
-        if transaction.transaction_type == "purchase":
-            player.total_spent += transaction.amount
 
-    def _get_next_transaction_id(self) -> int:
-        """Returns the next available transaction ID"""
-        return self._next_transaction_id
-
-    def get_all_transactions(self) -> List[Transaction]:
-        """Returns all stored transactions"""
-        return list(self.transactions.values())
-
-    def get_transaction_by_id(self, transaction_id: int) -> Optional[Transaction]:
-        """Get a transaction by its ID"""
+    def get_transaction(self, transaction_id: int) -> Optional[Transaction]:
+        """Get a transaction by its ID."""
         return self.transactions.get(transaction_id)
 
     def get_player_transactions(self, player_id: str) -> List[Transaction]:
-        """Get all transactions for a specific player"""
+        """Get all transactions for a specific player."""
         return [t for t in self.transactions.values() if t.player_id == player_id]
 
-    def update_transaction(self, transaction_id: int, new_transaction: Transaction) -> Transaction:
-        """Update an existing transaction"""
-        if transaction_id not in self.transactions:
-            raise ValueError(f"Transaction ID {transaction_id} not found")
-        if new_transaction.transaction_id != transaction_id:
-            raise ValueError("Transaction ID cannot be changed")
-
-        # Adjust player's total_spent and balance
-        old_trans = self.transactions[transaction_id]
-        old_player = self.players.get(old_trans.player_id)
-        new_player = self.players.get(new_transaction.player_id)
-
-        if old_player and old_trans.transaction_type == "purchase":
-            old_player.total_spent -= old_trans.amount
-            old_player.balance += old_trans.amount  # Refund the old amount
-        elif old_player and old_trans.transaction_type == "sale":
-            old_player.balance -= old_trans.amount  # Remove the old sale amount
-
-        if new_player and new_transaction.transaction_type == "purchase":
-            if new_player.balance < new_transaction.amount:
-                # Restore the old transaction and raise an error
-                if old_player and old_trans.transaction_type == "purchase":
-                    old_player.total_spent += old_trans.amount
-                    old_player.balance -= old_trans.amount
-                elif old_player and old_trans.transaction_type == "sale":
-                    old_player.balance += old_trans.amount
-                raise TransactionError(f"Insufficient balance for updated transaction")
-
-            new_player.total_spent += new_transaction.amount
-            new_player.balance -= new_transaction.amount
-        elif new_player and new_transaction.transaction_type == "sale":
-            new_player.balance += new_transaction.amount
-
-        self.transactions[transaction_id] = new_transaction
-        return new_transaction
+    def update_transaction(self, transaction_id: int, new_amount: int) -> None:
+        """Update an existing transaction's amount."""
+        transaction = self.transactions.get(transaction_id)
+        if not transaction:
+            raise TransactionError(f"Transaction {transaction_id} not found")
+        # Note: A real system would need more complex logic for balance adjustments on update
+        transaction.amount = new_amount
 
     def delete_transaction(self, transaction_id: int) -> None:
-        """Delete a transaction and adjust player's total_spent and balance"""
-        if transaction_id not in self.transactions:
-            raise ValueError(f"Transaction ID {transaction_id} not found")
+        """Delete a transaction and revert player balance/total_spent."""
+        transaction = self.transactions.get(transaction_id)
+        if not transaction:
+            raise TransactionError(f"Transaction {transaction_id} not found")
 
-        trans = self.transactions.pop(transaction_id)
-        player = self.players.get(trans.player_id)
-
+        player = self.players.get(transaction.player_id)
         if player:
-            if trans.transaction_type == "purchase":
-                player.total_spent -= trans.amount
-                player.balance += trans.amount  # Refund the amount
-            elif trans.transaction_type == "sale":
-                player.balance -= trans.amount  # Remove the sale amount
+            if transaction.transaction_type == "purchase":
+                player.balance += transaction.amount  # Revert balance
+                player.total_spent -= transaction.amount  # Revert spent
+            elif transaction.transaction_type == "sale":
+                player.balance -= transaction.amount  # Revert balance
 
-    # Market Prices
+        del self.transactions[transaction_id]
+
+    # --- Market Prices (Items) ---
     def add_market_price(self, market_price: MarketPrice) -> None:
-        """Add a new market price"""
+        """Add a new market price entry for an item."""
         key = (market_price.item_id, market_price.date)
         if key in self.market_prices:
-            raise ValueError(f"Market price for item {market_price.item_id} on {market_price.date} already exists")
+            # You might want to update instead of raising an error here, depending on desired behavior
+            raise ValueError(f"Market price for item {market_price.item_id} on {market_price.date} already exists.")
         self.market_prices[key] = market_price
 
-    def get_all_market_prices(self) -> List[MarketPrice]:
-        """Get all market prices"""
-        return list(self.market_prices.values())
-
-    def get_market_price_by_item_and_date(self, item_id: int, date: str) -> Optional[MarketPrice]:
-        """Get market price for a specific item on a specific date"""
+    def get_market_price(self, item_id: int, date: str) -> Optional[MarketPrice]:
+        """Get a market price for a specific item on a specific date."""
         return self.market_prices.get((item_id, date))
 
     def get_latest_market_price(self, item_id: int) -> Optional[MarketPrice]:
-        """Get the most recent market price for a specific item"""
-        prices = [p for (iid, _), p in self.market_prices.items() if iid == item_id]
-        if not prices:
-            return None
-        return max(prices, key=lambda p: p.date)
+        """Get the latest recorded market price for a specific item."""
+        latest_price = None
+        for (mp_item_id, mp_date), price_obj in self.market_prices.items():
+            if mp_item_id == item_id:
+                if latest_price is None or price_obj.date > latest_price.date:
+                    latest_price = price_obj
+        return latest_price
 
-    def update_market_price(self, item_id: int, date: str, new_price: MarketPrice) -> MarketPrice:
-        """Update an existing market price"""
+    def get_all_market_prices(self) -> List[MarketPrice]:
+        """Get all recorded market prices."""
+        return list(self.market_prices.values())
+
+    def update_market_price(self, item_id: int, date: str, new_price: Optional[int] = None,
+                            new_item_name: Optional[str] = None) -> None:
+        """Update an existing market price entry."""
         key = (item_id, date)
-        if key not in self.market_prices:
-            raise ValueError(f"Market price for item {item_id} on {date} not found")
-        self.market_prices[key] = new_price
-        return new_price
+        market_price = self.market_prices.get(key)
+        if not market_price:
+            raise ValueError(f"Market price for item {item_id} on {date} not found.")
+        if new_price is not None:
+            market_price.price = new_price
+        if new_item_name is not None:
+            market_price.item_name = new_item_name
+        # Note: If item_id or date needs to change, it's effectively a delete + add.
 
     def delete_market_price(self, item_id: int, date: str) -> None:
-        """Delete a market price"""
+        """Delete a specific market price entry."""
         key = (item_id, date)
         if key not in self.market_prices:
-            raise ValueError(f"Market price for item {item_id} on {date} not found")
-        self.market_prices.pop(key)
+            raise ValueError(f"Market price for item {item_id} on {date} not found.")
+        del self.market_prices[key]
 
-    # Players
-    def add_player(self, player: Player, with_random_balance: bool = True) -> Player:
-        """
-        Add a new player
+    def delete_market_item_history(self, item_id: int) -> None:
+        """Deletes all historical price entries for a given item ID."""
+        keys_to_delete = [(iid, date) for iid, date in self.market_prices.keys() if iid == item_id]
+        if not keys_to_delete:
+            raise ValueError(f"No market data found for item {item_id}")
+        for key in keys_to_delete:
+            del self.market_prices[key]
 
-        Args:
-            player: The player to add
-            with_random_balance: If True and player.balance is 0, generate a random balance
+        # Also remove associated image
+        if str(item_id) in self.item_images:
+            image_filename = self.item_images[str(item_id)]
+            image_path = os.path.join("static/images", image_filename)
+            if os.path.exists(image_path) and image_filename != 'default.png':
+                os.remove(image_path)
+            del self.item_images[str(item_id)]
 
-        Returns:
-            The added player
-
-        Raises:
-            ValueError: If player ID already exists
-        """
+    # --- Players ---
+    def add_player(self, player: Player) -> None:
+        """Add a new player."""
         if player.player_id in self.players:
-            raise ValueError(f"Player ID {player.player_id} already exists")
-
-        # Generate random balance if requested and no balance is set
-        if with_random_balance and player.balance == 0:
-            from models import Player as PlayerModel
-            player = PlayerModel.create_with_random_balance(
-                player_id=player.player_id,
-                username=player.username,
-                total_spent=player.total_spent
-            )
-
+            raise ValueError(f"Player ID {player.player_id} already exists.")
         self.players[player.player_id] = player
-        return player
 
-    def get_all_players(self) -> List[Player]:
-        """Get all players"""
-        return list(self.players.values())
-
-    def get_player_by_id(self, player_id: str) -> Optional[Player]:
-        """Get a player by ID"""
+    def get_player(self, player_id: str) -> Optional[Player]:
+        """Get a player by their ID."""
         return self.players.get(player_id)
 
-    def get_player_by_username(self, username: str) -> Optional[Player]:
-        """Get a player by username"""
-        for player in self.players.values():
-            if player.username.lower() == username.lower():
-                return player
-        return None
-
-    def update_player(self, player_id: str, new_player: Player) -> Player:
-        """Update an existing player"""
-        if player_id not in self.players:
-            raise ValueError(f"Player ID {player_id} not found")
-        if new_player.player_id != player_id:
-            raise ValueError("Player ID cannot be changed")
-        self.players[player_id] = new_player
-        return new_player
+    def update_player_info(self, player_id: str, username: Optional[str] = None, balance: Optional[int] = None) -> None:
+        """Update a player's username and/or balance."""
+        player = self.players.get(player_id)
+        if not player:
+            raise ValueError(f"Player {player_id} not found")
+        if username is not None:
+            player.username = username
+        if balance is not None:
+            player.balance = balance
 
     def delete_player(self, player_id: str) -> None:
-        """Delete a player"""
+        """Delete a player and all their associated transactions."""
         if player_id not in self.players:
-            raise ValueError(f"Player ID {player_id} not found")
-        self.players.pop(player_id)
+            raise ValueError(f"Player {player_id} not found")
 
-    # Analytical Methods
-    def calculate_total_spending(self) -> int:
-        """Calculate total spending across all transactions"""
-        return sum(trans.amount for trans in self.transactions.values()
-                   if trans.transaction_type == "purchase")
+        # Eliminar transacciones asociadas a este jugador
+        transactions_to_delete = [
+            trans_id for trans_id, trans_obj in self.transactions.items()
+            if trans_obj.player_id == player_id
+        ]
+        for trans_id in transactions_to_delete:
+            del self.transactions[trans_id]
 
-    def calculate_average_transaction(self, transaction_type: Optional[str] = None) -> float:
-        """
-        Calculate average transaction amount
+        del self.players[player_id]
 
-        Args:
-            transaction_type: Optional filter by transaction type ("purchase" or "sale")
-
-        Returns:
-            The average transaction amount
-        """
-        if transaction_type:
-            transactions = [t for t in self.transactions.values() if t.transaction_type == transaction_type]
-        else:
-            transactions = self.transactions.values()
-
-        return sum(trans.amount for trans in transactions) / len(transactions) if transactions else 0.0
-
-    def calculate_inflation_rate(self, item_id: int, start_date: str, end_date: str) -> Optional[float]:
-        """Calculate inflation rate for a specific item between two dates"""
-        prices = [price for (iid, date), price in self.market_prices.items() if iid == item_id]
-        if not prices:
-            return None
-
-        prices.sort(key=lambda p: p.date)
-        start_price = next((p.price for p in prices if p.date >= start_date), None)
-        end_price = next((p.price for p in reversed(prices) if p.date <= end_date), None)
-
-        if start_price is None or end_price is None:
-            return None
-
-        if start_price == 0:
-            return None  # Avoid division by zero
-
-        return ((end_price - start_price) / start_price) * 100
-
-    def get_player_spending_stats(self, player_id: str) -> dict:
-        """
-        Get spending statistics for a specific player
-
-        Returns:
-            Dictionary with spending statistics
-        """
-        player = self.get_player_by_id(player_id)
+    # --- Analytics & Reporting ---
+    def get_player_spending_stats(self, player_id: str) -> Dict[str, Any]:
+        """Get spending statistics for a specific player."""
+        player = self.players.get(player_id)
         if not player:
             return {"error": f"Player {player_id} not found"}
 
@@ -292,17 +253,15 @@ class GTAOnlineOperations:
         }
 
     def get_top_spenders(self, limit: int = 5) -> List[Player]:
-        """Get top spending players"""
+        """Get top spending players."""
         return sorted(self.players.values(), key=lambda p: p.total_spent, reverse=True)[:limit]
 
     def get_market_trends(self, item_id: int, from_date: Optional[str] = None, to_date: Optional[str] = None) -> List[
         MarketPrice]:
-        """Get market price trends for a specific item"""
+        """Get market price trends for a specific item within a date range."""
         prices = [p for (iid, _), p in self.market_prices.items() if iid == item_id]
-
         if from_date:
             prices = [p for p in prices if p.date >= from_date]
         if to_date:
             prices = [p for p in prices if p.date <= to_date]
-
         return sorted(prices, key=lambda p: p.date)

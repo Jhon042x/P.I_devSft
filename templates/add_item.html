@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Añadir Item - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Añadir Nuevo Item al Mercado</h2>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+    <form action="/items" method="post" enctype="multipart/form-data" class="form-card">
+        <label for="item_name">Nombre del Item:</label>
+        <input type="text" id="item_name" name="item_name" value="{{ item_name if item_name }}" required>
+
+        <label for="price">Precio:</label>
+        <input type="number" id="price" name="price" value="{{ price if price }}" required min="0">
+
+        <label for="item_id">ID del Item (Opcional, si no se especifica se genera uno nuevo):</label>
+        <input type="number" id="item_id" name="item_id" value="{{ item_id if item_id }}" min="0">
+
+        <label for="image">Imagen del Item (Opcional):</label>
+        <input type="file" id="image" name="image" accept="image/*">
+
+        <button type="submit">Añadir Item</button>
+    </form>
+    <p><a href="/view-items" class="button secondary">Volver a Ver Items</a></p>
+{% endblock %}

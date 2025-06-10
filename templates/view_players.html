@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Jugadores - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Jugadores Registrados</h2>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+
+    <form action="/view-players" method="get" class="search-form">
+        <input type="text" name="query" placeholder="Buscar por ID de Jugador" value="{{ query if query }}">
+        <button type="submit">Buscar</button>
+        {% if query %}<a href="/view-players" class="button secondary">Limpiar Búsqueda</a>{% endif %}
+    </form>
+
+    {% if players %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID Jugador</th>
+                    <th>Usuario</th>
+                    <th>Saldo</th>
+                    <th>Total Gastado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in players %}
+                    <tr>
+                        <td>{{ player.player_id }}</td>
+                        <td>{{ player.username }}</td>
+                        <td>${{ "{:,.0f}".format(player.balance) }}</td>
+                        <td>${{ "{:,.0f}".format(player.total_spent) }}</td>
+                        <td>
+                            <a href="/edit-player/{{ player.player_id }}" class="button small">Editar</a>
+                            <form action="/players/delete/{{ player.player_id }}" method="post" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este jugador y todas sus transacciones?');">
+                                <button type="submit" class="button small delete">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No hay jugadores registrados o no se encontraron resultados para tu búsqueda.</p>
+    {% endif %}
+    <p><a href="/add-player" class="button">Añadir Nuevo Jugador</a></p>
+{% endblock %}

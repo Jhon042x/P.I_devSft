@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GTA Online Economy{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="logo">GTA Online Economy</a>
+            <nav>
+                <ul>
+                    <li><a href="/">Inicio</a></li>
+                    <li class="dropdown">
+                        <a href="#" class="dropbtn">Items</a>
+                        <div class="dropdown-content">
+                            <a href="/add-item">Añadir Item</a>
+                            <a href="/view-items">Ver Items</a>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropbtn">Jugadores</a>
+                        <div class="dropdown-content">
+                            <a href="/add-player">Añadir Jugador</a>
+                            <a href="/view-players">Ver Jugadores</a>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropbtn">Transacciones</a>
+                        <div class="dropdown-content">
+                            <a href="/add-transaction">Añadir Transacción</a>
+                            <a href="/view-transactions">Ver Transacciones</a>
+                        </div>
+                    </li>
+                    <li><a href="/analytics">Análisis</a></li>
+                    <li class="dropdown">
+                        <a href="#" class="dropbtn">Sobre el Proyecto</a>
+                        <div class="dropdown-content">
+                            <a href="/developer">Desarrollador</a>
+                            <a href="/planning">Fase de Planificación</a>
+                            <a href="/design">Fase de Diseño</a>
+                            <a href="/objective">Objetivo</a>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 GTA Online Economy Project. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+</body>
+</html>

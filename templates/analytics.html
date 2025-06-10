@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Análisis - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Análisis de la Economía de GTA Online</h2>
+
+    <div class="card-grid">
+        <div class="card analytics-card">
+            <h3>Transacciones Totales</h3>
+            <p class="metric">{{ total_transactions }}</p>
+        </div>
+        <div class="card analytics-card">
+            <h3>Jugadores Registrados</h3>
+            <p class="metric">{{ total_players }}</p>
+        </div>
+        <div class="card analytics-card">
+            <h3>Items en el Mercado</h3>
+            <p class="metric">{{ total_items }}</p>
+        </div>
+        <div class="card analytics-card">
+            <h3>Dinero Total Gastado (compras)</h3>
+            <p class="metric">${{ "{:,.0f}".format(total_spent_gta_dollars) }}</p>
+        </div>
+    </div>
+
+    <div class="analytics-section">
+        <h3>Top 5 Jugadores con Mayor Gasto Total</h3>
+        {% if top_spenders %}
+            <ol class="top-list">
+                {% for player in top_spenders %}
+                    <li>{{ player.username }} (ID: {{ player.player_id }}) - Total Gastado: ${{ "{:,.0f}".format(player.total_spent) }}</li>
+                {% endfor %}
+            </ol>
+        {% else %}
+            <p>No hay datos de gasto de jugadores.</p>
+        {% endif %}
+    </div>
+
+    <div class="analytics-section">
+        <h3>Top 5 Items Más Caros (último precio registrado)</h3>
+        {% if top_expensive_items %}
+            <ol class="top-list">
+                {% for item in top_expensive_items %}
+                    <li>
+                        <img src="/static/images/{{ ops.item_images.get(item.item_id|string, 'default.png') }}" alt="{{ item.item_name }}" class="item-thumbnail small">
+                        {{ item.item_name }} (ID: {{ item.item_id }}) - Precio: ${{ "{:,.0f}".format(item.price) }} (Fecha: {{ item.date }})
+                    </li>
+                {% endfor %}
+            </ol>
+        {% else %}
+            <p>No hay datos de precios de ítems.</p>
+        {% endif %}
+    </div>
+
+    <div class="analytics-section">
+        <h3>Tendencias de Precios de Items</h3>
+        <p>Esta sección puede expandirse para mostrar gráficos de tendencias de precios. Puedes usar la API <code>/api/analytics/market-trends/{item_id}</code> para obtener los datos.</p>
+    </div>
+{% endblock %}

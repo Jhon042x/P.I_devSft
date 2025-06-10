@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Error - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <div class="error-container">
+        <h1>Error Inesperado</h1>
+        <p>Ha ocurrido un error al intentar cargar la página o procesar tu solicitud.</p>
+        {% if error_message %}
+            <p style="color: red;">Detalles: {{ error_message }}</p>
+        {% endif %}
+        <p>Por favor, revisa la consola del servidor (terminal Uvicorn) para un mensaje de error más detallado.</p>
+        <p><a href="/" class="button">Volver a Inicio</a></p>
+    </div>
+{% endblock %}

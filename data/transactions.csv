@@ -1,0 +1,10 @@
+transaction_id,player_id,item,amount,date,transaction_type
+1,player_001,Oppressor Mk II,3500000,2024-06-05,purchase
+2,player_002,Armored Kuruma,525000,2024-06-01,purchase
+3,player_003,Cayo Perico Heist (Access),22000,2024-05-15,purchase
+4,player_001,Terrorbyte,1375000,2024-04-01,purchase
+5,player_004,Buzzard Attack Chopper,1750000,2024-04-05,purchase
+6,player_003,Armored Kuruma,525000,2024-06-08,sale
+7,player_002,Oppressor Mk II,3500000,2024-06-06,purchase
+8,player_005,Kotsatka Submarine,2200000,2024-06-09,purchase
+9,player_001,Deluxo,4721500,2024-06-10,purchase

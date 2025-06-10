@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Items - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Items del Mercado</h2>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+
+    <form action="/view-items" method="get" class="search-form">
+        <input type="text" name="query" placeholder="Buscar por ID o Nombre" value="{{ query if query }}">
+        <select name="query_type">
+            <option value="id" {% if query_type == "id" %}selected{% endif %}>ID</option>
+            <option value="name" {% if query_type == "name" %}selected{% endif %}>Nombre</option>
+        </select>
+        <button type="submit">Buscar</button>
+        {% if query %}<a href="/view-items" class="button secondary">Limpiar Búsqueda</a>{% endif %}
+    </form>
+
+    {% if items %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Imagen</th>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Precio</th>
+                    <th>Fecha Última Actualización</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr>
+                        <td>
+                            <img src="/static/images/{{ item.image_filename }}" alt="{{ item.item_name }}" class="item-thumbnail">
+                        </td>
+                        <td>{{ item.item_id }}</td>
+                        <td>{{ item.item_name }}</td>
+                        <td>${{ "{:,.0f}".format(item.price) }}</td>
+                        <td>{{ item.date }}</td>
+                        <td>
+                            <a href="/edit-item/{{ item.item_id }}" class="button small">Editar</a>
+                            <form action="/items/delete/{{ item.item_id }}" method="post" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este item y todo su historial de precios?');">
+                                <button type="submit" class="button small delete">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No hay ítems registrados en el mercado o no se encontraron resultados para tu búsqueda.</p>
+    {% endif %}
+    <p><a href="/add-item" class="button">Añadir Nuevo Item</a></p>
+{% endblock %}

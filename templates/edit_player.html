@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Jugador - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Editar Jugador</h2>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+    {% if player %}
+        <form action="/players/update/{{ player.player_id }}" method="post" class="form-card">
+            <label for="player_id">ID del Jugador:</label>
+            <input type="text" id="player_id" name="player_id" value="{{ player.player_id }}" readonly>
+            <p class="form-hint">El ID del jugador no se puede cambiar.</p>
+
+            <label for="username">Nombre de Usuario:</label>
+            <input type="text" id="username" name="username" value="{{ player.username }}" required>
+
+            <label for="balance">Saldo Actual:</label>
+            <input type="number" id="balance" name="balance" value="{{ player.balance }}" required min="0">
+
+            <button type="submit">Actualizar Jugador</button>
+        </form>
+    {% else %}
+        <p class="error-message">Jugador no encontrado para editar.</p>
+    {% endif %}
+    <p><a href="/view-players" class="button secondary">Volver a Ver Jugadores</a></p>
+{% endblock %}

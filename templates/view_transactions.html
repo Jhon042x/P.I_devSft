@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Transacciones - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Transacciones Registradas</h2>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+
+    <form action="/view-transactions" method="get" class="search-form">
+        <label for="player_filter">Filtrar por Jugador:</label>
+        <select id="player_filter" name="player_id">
+            <option value="">Todos los Jugadores</option>
+            {% for p in players %}
+                <option value="{{ p.player_id }}" {% if player_id == p.player_id %}selected{% endif %}>{{ p.username }} ({{ p.player_id }})</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Filtrar</button>
+        {% if player_id %}<a href="/view-transactions" class="button secondary">Limpiar Filtro</a>{% endif %}
+    </form>
+
+    {% if transactions %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID Transacción</th>
+                    <th>ID Jugador</th>
+                    <th>Item</th>
+                    <th>Monto</th>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.transaction_id }}</td>
+                        <td>{{ transaction.player_id }}</td>
+                        <td>{{ transaction.item }}</td>
+                        <td>${{ "{:,.0f}".format(transaction.amount) }}</td>
+                        <td>{{ transaction.date }}</td>
+                        <td>{{ transaction.transaction_type|capitalize }}</td>
+                        <td>
+                            <form action="/transactions/delete/{{ transaction.transaction_id }}" method="post" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta transacción?');">
+                                <button type="submit" class="button small delete">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No hay transacciones registradas o no se encontraron resultados para tu filtro.</p>
+    {% endif %}
+    <p><a href="/add-transaction" class="button">Añadir Nueva Transacción</a></p>
+{% endblock %}

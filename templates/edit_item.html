@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Item - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Editar Item del Mercado</h2>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+    {% if item %}
+        <form action="/items/update/{{ item.item_id }}" method="post" enctype="multipart/form-data" class="form-card">
+            <label for="item_name">Nombre del Item:</label>
+            <input type="text" id="item_name" name="item_name" value="{{ item.item_name }}" required>
+
+            <label for="price">Precio:</label>
+            <input type="number" id="price" name="price" value="{{ item.price }}" required min="0">
+
+            <label>Imagen Actual:</label>
+            <img src="/static/images/{{ image_filename }}" alt="{{ item.item_name }}" class="item-thumbnail large">
+            <p>Si subes una nueva imagen, la anterior será reemplazada.</p>
+
+            <label for="image">Nueva Imagen del Item (Opcional):</label>
+            <input type="file" id="image" name="image" accept="image/*">
+
+            <button type="submit">Actualizar Item</button>
+        </form>
+    {% else %}
+        <p class="error-message">Item no encontrado para editar.</p>
+    {% endif %}
+    <p><a href="/view-items" class="button secondary">Volver a Ver Items</a></p>
+{% endblock %}

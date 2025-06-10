@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Añadir Transacción - GTA Online Economy{% endblock %}
+
+{% block content %}
+    <h2>Añadir Nueva Transacción</h2>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+    <form action="/transactions" method="post" class="form-card">
+        <label for="player_id">Jugador:</label>
+        <select id="player_id" name="player_id" required>
+            <option value="">Selecciona un jugador</option>
+            {% for p in players %}
+                <option value="{{ p.player_id }}" {% if player_id == p.player_id %}selected{% endif %}>{{ p.username }} ({{ p.player_id }})</option>
+            {% endfor %}
+        </select>
+        {% if not players %}
+            <p class="form-hint">No hay jugadores registrados. <a href="/add-player">Añade uno primero</a>.</p>
+        {% endif %}
+
+        <label for="item">Item:</label>
+        <select id="item" name="item" required>
+            <option value="">Selecciona un item</option>
+            {% for item_id, item_name in items %}
+                <option value="{{ item_name }}" {% if item == item_name %}selected{% endif %}>{{ item_name }} (ID: {{ item_id }})</option>
+            {% endfor %}
+        </select>
+        {% if not items %}
+            <p class="form-hint">No hay items en el mercado. <a href="/add-item">Añade uno primero</a>.</p>
+        {% endif %}
+
+        <label for="amount">Monto ($GTA):</label>
+        <input type="number" id="amount" name="amount" value="{{ amount if amount }}" required min="1">
+
+        <label for="transaction_type">Tipo de Transacción:</label>
+        <select id="transaction_type" name="transaction_type" required>
+            <option value="purchase" {% if transaction_type == "purchase" %}selected{% endif %}>Compra</option>
+            <option value="sale" {% if transaction_type == "sale" %}selected{% endif %}>Venta</option>
+        </select>
+
+        <button type="submit">Añadir Transacción</button>
+    </form>
+    <p><a href="/view-transactions" class="button secondary">Volver a Ver Transacciones</a></p>
+{% endblock %}
