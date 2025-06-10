@@ -33,35 +33,43 @@ ITEM_IMAGES_FILE = os.path.join(DATA_DIR, "item_images.json")
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs("static/images", exist_ok=True)  # Ensure images directory exists for uploads
 
-# --- Initialize GTAOnlineOperations ---
-ops = GTAOnlineOperations()
-
 
 # --- Helper functions for data loading/saving ---
 
-def load_transactions() -> Dict[int, Transaction]:
-    transactions = {}
-    if not os.path.exists(TRANSACTIONS_FILE) or os.stat(TRANSACTIONS_FILE).st_size == 0:
-        return transactions  # Return empty dict if file doesn't exist or is empty
-    with open(TRANSACTIONS_FILE, mode='r', newline='', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            try:
-                # Ensure all fields are correctly typed
-                trans_id = int(row['transaction_id'])
-                amount = int(row['amount'])
-                transaction = Transaction(
-                    transaction_id=trans_id,
-                    player_id=row['player_id'],
-                    item=row['item'],
-                    amount=amount,
-                    date=row['date'],
-                    transaction_type=row.get('transaction_type', 'purchase')  # Default to 'purchase' if not specified
-                )
-                transactions[trans_id] = transaction
-            except (ValueError, KeyError) as e:
-                print(f"Skipping malformed transaction row: {row} - Error: {e}")
-    return transactions
+def load_transactions(ops: 'GTAOnlineOperations'):
+    print(f"DEBUG: Intentando cargar transacciones desde: {TRANSACTIONS_FILE}")
+    if not os.path.exists(TRANSACTIONS_FILE):
+        print(f"DEBUG: ¡ERROR! Archivo de transacciones NO ENCONTRADO en: {TRANSACTIONS_FILE}")
+        return
+    try:
+        with open(TRANSACTIONS_FILE, mode='r', newline='', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            print(f"DEBUG: Cabeceras del archivo transactions.csv: {reader.fieldnames}")
+            rows_read = 0
+            for row in reader:
+                try:
+                    transaction_id = int(row['transaction_id'])
+                    player_id = row['player_id']
+                    item = row['item']
+                    amount = int(row['amount'])
+                    date = row['date']
+                    transaction_type = row.get('transaction_type', 'purchase') # Default a 'purchase' si no existe
+                    transaction = Transaction(
+                        transaction_id=transaction_id,
+                        player_id=player_id,
+                        item=item,
+                        amount=amount,
+                        date=date,
+                        transaction_type=transaction_type
+                    )
+                    ops.transactions[transaction_id] = transaction
+                    ops._next_transaction_id = max(ops._next_transaction_id, transaction_id + 1)
+                    rows_read += 1
+                except (ValueError, KeyError) as e:
+                    print(f"DEBUG: ERROR al leer fila de transacción: {row} - {e}")
+            print(f"DEBUG: Se leyeron {rows_read} filas de transactions.csv")
+    except Exception as e:
+        print(f"DEBUG: ERROR general al abrir/leer transactions.csv: {e}")
 
 
 def save_transactions(transactions: Dict[int, Transaction]):
@@ -87,28 +95,30 @@ def save_transactions(transactions: Dict[int, Transaction]):
             })
 
 
-def load_market_prices() -> Dict[Tuple[int, str], MarketPrice]:
-    market_prices = {}
-    if not os.path.exists(MARKET_PRICES_FILE) or os.stat(MARKET_PRICES_FILE).st_size == 0:
-        print(f"DEBUG: El archivo {MARKET_PRICES_FILE} está vacío o no existe.")
-        return market_prices  # Return empty dict if file doesn't exist or is empty
-    with open(MARKET_PRICES_FILE, mode='r', newline='', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            try:
-                item_id = int(row['item_id'])
-                price = int(row['price'])
-                market_price = MarketPrice(
-                    item_id=item_id,
-                    item_name=row['item_name'],
-                    price=price,
-                    date=row['date']
-                )
-                market_prices[(item_id, row['date'])] = market_price
-            except (ValueError, KeyError) as e:
-                print(f"Skipping malformed market price row: {row} - Error: {e}")
-    print(f"DEBUG: Se cargaron {len(market_prices)} precios de mercado.")
-    return market_prices
+def load_market_prices(ops: 'GTAOnlineOperations'):
+    print(f"DEBUG: Intentando cargar precios de mercado desde: {MARKET_PRICES_FILE}")
+    if not os.path.exists(MARKET_PRICES_FILE):
+        print(f"DEBUG: ¡ERROR! Archivo de precios de mercado NO ENCONTRADO en: {MARKET_PRICES_FILE}")
+        return
+    try:
+        with open(MARKET_PRICES_FILE, mode='r', newline='', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            print(f"DEBUG: Cabeceras del archivo market_prices.csv: {reader.fieldnames}")
+            rows_read = 0
+            for row in reader:
+                try:
+                    item_id = int(row['item_id'])
+                    item_name = row['item_name']
+                    price = int(row['price'])
+                    date = row['date']
+                    market_price = MarketPrice(item_id=item_id, item_name=item_name, price=price, date=date)
+                    ops.market_prices[(item_id, date)] = market_price
+                    rows_read += 1
+                except (ValueError, KeyError) as e:
+                    print(f"DEBUG: ERROR al leer fila de precio de mercado: {row} - {e}")
+            print(f"DEBUG: Se leyeron {rows_read} filas de market_prices.csv")
+    except Exception as e:
+        print(f"DEBUG: ERROR general al abrir/leer market_prices.csv: {e}")
 
 
 def save_market_prices(market_prices: Dict[Tuple[int, str], MarketPrice]):
@@ -131,27 +141,35 @@ def save_market_prices(market_prices: Dict[Tuple[int, str], MarketPrice]):
             })
 
 
-def load_players() -> Dict[str, Player]:
-    players = {}
-    if not os.path.exists(PLAYERS_FILE) or os.stat(PLAYERS_FILE).st_size == 0:
-        return players  # Return empty dict if file doesn't exist or is empty
-    with open(PLAYERS_FILE, mode='r', newline='', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            try:
-                player_id = row['player_id']
-                balance = int(row['balance'])
-                total_spent = int(row.get('total_spent', 0))  # Default to 0 if not specified
-                player = Player(
-                    player_id=player_id,
-                    username=row['username'],
-                    balance=balance,
-                    total_spent=total_spent
-                )
-                players[player_id] = player
-            except (ValueError, KeyError) as e:
-                print(f"Skipping malformed player row: {row} - Error: {e}")
-    return players
+def load_players(ops: 'GTAOnlineOperations'):
+    print(f"DEBUG: Intentando cargar jugadores desde: {PLAYERS_FILE}")
+    if not os.path.exists(PLAYERS_FILE):
+        print(f"DEBUG: ¡ERROR! Archivo de jugadores NO ENCONTRADO en: {PLAYERS_FILE}")
+        return
+    try:
+        with open(PLAYERS_FILE, mode='r', newline='', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            print(f"DEBUG: Cabeceras del archivo players.csv: {reader.fieldnames}")
+            rows_read = 0
+            for row in reader:
+                try:
+                    player_id = row['player_id']
+                    username = row['username']
+                    balance = int(row.get('balance', 0)) # Usar .get para valor por defecto si no existe
+                    total_spent = int(row.get('total_spent', 0)) # Usar .get
+                    player = Player(
+                        player_id=player_id,
+                        username=username,
+                        balance=balance,
+                        total_spent=total_spent
+                    )
+                    ops.players[player_id] = player
+                    rows_read += 1
+                except (ValueError, KeyError) as e:
+                    print(f"DEBUG: ERROR al leer fila de jugador: {row} - {e}")
+            print(f"DEBUG: Se leyeron {rows_read} filas de players.csv")
+    except Exception as e:
+        print(f"DEBUG: ERROR general al abrir/leer players.csv: {e}")
 
 
 def save_players(players: Dict[str, Player]):
@@ -174,18 +192,39 @@ def save_players(players: Dict[str, Player]):
             })
 
 
-def load_item_images() -> Dict[str, str]:
-    if not os.path.exists(ITEM_IMAGES_FILE) or os.stat(ITEM_IMAGES_FILE).st_size == 0:
-        return {}  # Return an empty dictionary if file doesn't exist or is empty
-    with open(ITEM_IMAGES_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
+def load_item_images(ops: 'GTAOnlineOperations'):
+    print(f"DEBUG: Intentando cargar imágenes de ítems desde: {ITEM_IMAGES_FILE}")
+    if not os.path.exists(ITEM_IMAGES_FILE):
+        print(f"DEBUG: ¡ERROR! Archivo de imágenes de ítems NO ENCONTRADO en: {ITEM_IMAGES_FILE}")
+        # Crea un archivo JSON vacío si no existe para evitar errores futuros
+        with open(ITEM_IMAGES_FILE, 'w', encoding='utf-8') as f:
+            json.dump({}, f)
+        print(f"DEBUG: Creado archivo vacío para item_images.json")
+        return
+    try:
+        with open(ITEM_IMAGES_FILE, 'r', encoding='utf-8') as f:
+            ops.item_images = json.load(f)
+        print(f"DEBUG: Se cargaron {len(ops.item_images)} entradas de item_images.json")
+    except json.JSONDecodeError as e:
+        print(f"DEBUG: ERROR al decodificar JSON de item_images.json: {e}. El archivo podría estar mal formado.")
+        ops.item_images = {} # Reinicia a vacío para evitar problemas
+    except Exception as e:
+        print(f"DEBUG: ERROR general al abrir/leer item_images.json: {e}")
 
+def load_all_data(ops: 'GTAOnlineOperations'):
+    print("DEBUG: Iniciando carga de TODOS los datos...")
+    load_transactions(ops)
+    load_players(ops)
+    load_market_prices(ops)
+    load_item_images(ops)
+    print("DEBUG: Finalizada carga de TODOS los datos.")
 
 def save_item_images(item_images: Dict[str, str]):
     with open(ITEM_IMAGES_FILE, 'w', encoding='utf-8') as f:
         json.dump(item_images, f, indent=4)
 
-
+# --- Initialize GTAOnlineOperations ---
+ops = GTAOnlineOperations()
 # --- FastAPI App Initialization ---
 app = FastAPI(
     title="GTA Online Microtransactions API",
@@ -201,30 +240,16 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # --- App Lifespan (Load/Save Data) ---
 @app.on_event("startup")
 async def startup_event():
-    print("Iniciando carga de datos de la aplicación...")
+    global ops
+    print("DEBUG: Iniciando evento de startup...")
+    load_all_data(ops)
+    print(f"DEBUG: Después de cargar datos. Número de transacciones: {len(ops.transactions)}")
+    print(f"DEBUG: Después de cargar datos. Número de jugadores: {len(ops.players)}")
+    print(f"DEBUG: Después de cargar datos. Número de precios de mercado: {len(ops.market_prices)}") # <-- IMPORTANTE
+    print(f"DEBUG: Después de cargar datos. Número de imágenes de ítems: {len(ops.item_images)}")
+    # Opcional: imprimir el contenido de ops.market_prices para verificar
+    # print(f"DEBUG: Contenido de ops.market_prices: {ops.market_prices}")
 
-    print("Cargando transacciones...")
-    ops.transactions = load_transactions()
-    print(f"Transacciones cargadas: {len(ops.transactions)} registros.")
-
-    print("Cargando precios de mercado...")
-    ops.market_prices = load_market_prices()
-    print(f"Precios de mercado cargados: {len(ops.market_prices)} registros.")
-
-    print("Cargando jugadores...")
-    ops.players = load_players()
-    print(f"Jugadores cargados: {len(ops.players)} registros.")
-
-    print("Cargando imágenes de ítems...")
-    ops.item_images = load_item_images()
-    print(f"Imágenes de ítems cargadas: {len(ops.item_images)} registros.")
-
-    # Inicializar contadores de IDs en operations.py
-    ops._next_transaction_id = max(ops.transactions.keys()) + 1 if ops.transactions else 1
-    ops._next_market_item_id = ops._get_next_market_item_id()
-    ops._next_player_id_counter = ops._get_next_player_id_counter()  # Inicializar desde datos existentes si aplica
-
-    print("Datos cargados en el inicio de la aplicación. ¡Listo!")
 
 
 @app.on_event("shutdown")
@@ -686,8 +711,12 @@ async def analytics_page(request: Request):
         market_trend_plots = []
         item_names_map = {p.item_id: p.item_name for (item_id, date), p in ops.market_prices.items()}
         unique_item_ids = sorted(list(item_names_map.keys()))
+        print(f"DEBUG: analytics_page - IDs de ítems únicos para gráficos: {unique_item_ids}")  # <-- IMPORTANTE
+        print(f"DEBUG: analytics_page - Número de ítems únicos: {len(unique_item_ids)}")  # <-- IMPORTANTE
         for item_id in unique_item_ids:
             trends = ops.get_market_trends(item_id)
+            print(
+                f"DEBUG: analytics_page - Procesando item_id: {item_id}, Trends obtenidos: {len(trends) if trends else 0}")  # <-- IMPORTANTE
             if trends:
                 # Asegurarse de que los datos estén ordenados por fecha
                 trends.sort(key=lambda p: datetime.strptime(p.date, "%Y-%m-%d"))
@@ -717,6 +746,11 @@ async def analytics_page(request: Request):
                     "item_name": item_name,
                     "plot_data": f"data:image/png;base64,{image_base64}"  # Formato para incrustar en HTML
                 })
+            else:
+                print(f"DEBUG: analytics_page - No se encontraron tendencias para item_id: {item_id}")
+
+            print(
+                f"DEBUG: analytics_page - Gráficos de tendencia generados: {len(market_trend_plots)}")  # <-- IMPORTANTE
 
         return templates.TemplateResponse("analytics.html", {
             "request": request,
@@ -727,6 +761,7 @@ async def analytics_page(request: Request):
             "total_spent_gta_dollars": total_spent_gta_dollars,
             "top_spenders": top_spenders,
             "top_expensive_items": top_expensive_items,
+            "market_trend_plots": market_trend_plots,
         })
     except Exception as e:  # <--- Added try-except block
         print(f"Error in analytics_page: {e}")
