@@ -14,6 +14,9 @@ import random
 import uvicorn  # Solo para referencia, no es necesario para ejecutar
 import base64  # Utilizado en algún punto para imágenes, si no se usa puede eliminarse
 import traceback  # Importado para ver el traceback completo en la consola
+import matplotlib.pyplot as plt  # Importa matplotlib
+import io                       # Para manejar datos en memoria
+import base64                   # Para codificar imágenes a base64
 
 # Updated imports
 from models import Transaction, MarketPrice, Player
@@ -680,6 +683,40 @@ async def analytics_page(request: Request):
 
         # Sort by price descending
         top_expensive_items = sorted(latest_prices.values(), key=lambda item: item.price, reverse=True)[:5]
+        market_trend_plots = []
+        item_names_map = {p.item_id: p.item_name for (item_id, date), p in ops.market_prices.items()}
+        unique_item_ids = sorted(list(item_names_map.keys()))
+        for item_id in unique_item_ids:
+            trends = ops.get_market_trends(item_id)
+            if trends:
+                # Asegurarse de que los datos estén ordenados por fecha
+                trends.sort(key=lambda p: datetime.strptime(p.date, "%Y-%m-%d"))
+
+                dates = [datetime.strptime(p.date, "%Y-%m-%d") for p in trends]
+                prices = [p.price for p in trends]
+                item_name = trends[0].item_name if trends else "Unknown Item"  # Nombre del item
+
+                # Crear el gráfico con Matplotlib
+                fig, ax = plt.subplots(figsize=(8, 4))  # Tamaño del gráfico (ancho, alto)
+                ax.plot(dates, prices, marker='o', linestyle='-')
+                ax.set_title(f'Tendencia de Precios para "{item_name}" (ID: {item_id})')
+                ax.set_xlabel('Fecha')
+                ax.set_ylabel('Precio ($)')
+                ax.grid(True)
+                fig.autofmt_xdate()  # Rota las etiquetas de fecha para mejor legibilidad
+
+                # Convertir el gráfico a una imagen PNG codificada en Base64
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight')
+                plt.close(fig)  # Importante: cerrar la figura para liberar memoria
+                buf.seek(0)
+                image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+
+                market_trend_plots.append({
+                    "item_id": item_id,
+                    "item_name": item_name,
+                    "plot_data": f"data:image/png;base64,{image_base64}"  # Formato para incrustar en HTML
+                })
 
         return templates.TemplateResponse("analytics.html", {
             "request": request,

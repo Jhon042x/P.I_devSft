@@ -55,6 +55,18 @@
 
     <div class="analytics-section">
         <h3>Tendencias de Precios de Items</h3>
-        <p>Esta sección puede expandirse para mostrar gráficos de tendencias de precios. Puedes usar la API <code>/api/analytics/market-trends/{item_id}</code> para obtener los datos.</p>
+        {% if market_trend_plots %}
+            <div class="charts-container">
+                {% for plot_info in market_trend_plots %}
+                    <div class="chart-item">
+                        <h4>{{ plot_info.item_name }} (ID: {{ plot_info.item_id }})</h4>
+                        <img src="{{ plot_info.plot_data }}" alt="Gráfico de tendencia para {{ plot_info.item_name }}">
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No hay datos disponibles para mostrar tendencias de precios de ítems.</p>
+        {% endif %}
     </div>
+
 {% endblock %}

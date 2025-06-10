@@ -6,6 +6,7 @@ pillow==11.1.0
 pydantic==2.10.6
 pydantic_core==2.27.2
 python-multipart==0.0.20
+matplotlib==3.8.4
 # Las siguientes librerías no son necesarias para tu código actual (manejo de CSV/JSON),
 # pero puedes dejarlas si planeas usarlas para una base de datos en el futuro.
 # aiosqlite==0.21.0
